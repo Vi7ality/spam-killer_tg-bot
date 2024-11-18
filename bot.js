@@ -7,12 +7,24 @@ const bot = new Telegraf(APP_TOKEN);
 
 const bannedWords = ["спам", "реклама", "запрещённое_слово", "spam", "follow link"];
 const admins = ADMIN_ID;
+let isMessageFilterEnabled = true;
+let isVoiceFilterEnabled = true;
+
+bot.command("toggle_message_filter", (ctx) => {
+  isMessageFilterEnabled = !isMessageFilterEnabled;
+  ctx.reply(`Фильтр сообщений ${isMessageFilterEnabled ? "включен" : "выключен"}.`);
+});
+
+bot.command("toggle_voice_filter", (ctx) => {
+  isVoiceFilterEnabled = !isVoiceFilterEnabled;
+  ctx.reply(`Фильтр голосовых сообщений ${isVoiceFilterEnabled ? "включен" : "выключен"}.`);
+});
 
 bot.command("add_banned_word", (ctx) => {
   const userId = ctx.message.from.id;
 
   if (!admins.includes(userId)) {
-    ctx.reply("У вас нет прав на добавление запрещённых слов.");
+    ctx.reply("У вас нет прав на добавление запрещённых слов. Обратитесь к администратору.");
     return;
   }
 
@@ -26,6 +38,9 @@ bot.command("add_banned_word", (ctx) => {
 });
 
 bot.on("text", (ctx) => {
+  if (!isMessageFilterEnabled) {
+    return;
+  }
   const messageText = ctx.message.text.toLowerCase();
   if (bannedWords.some((word) => messageText.includes(word))) {
     ctx.deleteMessage();
@@ -38,11 +53,12 @@ bot.on("text", (ctx) => {
 const userAttempts = {};
 
 bot.on("voice", (ctx) => {
+  if (!isVoiceFilterEnabled) {
+    return;
+  }
   const userId = ctx.message.from.id;
 
   ctx.deleteMessage();
-
-  // Проверяем, сколько раз пользователь отправлял голосовые сообщения
   if (userAttempts[userId]) {
     userAttempts[userId]++;
   } else {
